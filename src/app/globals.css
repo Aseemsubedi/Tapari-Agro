@@ -1,0 +1,189 @@
+@import "tailwindcss";
+
+:root {
+  /* Tapari Agro logo — deep green, grain gold, leaf lime */
+  --chalk: #f6faf4;
+  --mist: #e5f1e6;
+  --pine: #145c2a;
+  --ink: #102418;
+  --brass: #d6c52f;
+  --sage: #c5dba0;
+  --harvest: var(--brass);
+  --leaf: #1f7a3f;
+  --lime: #7eb52e;
+  --background: var(--chalk);
+  --foreground: var(--ink);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-chalk: var(--chalk);
+  --color-mist: var(--mist);
+  --color-pine: var(--pine);
+  --color-ink: var(--ink);
+  --color-brass: var(--brass);
+  --color-sage: var(--sage);
+  --color-harvest: var(--harvest);
+  --color-leaf: var(--leaf);
+  --color-lime: var(--lime);
+  --font-sans: var(--font-body);
+  --font-display: var(--font-display);
+}
+
+@layer base {
+  body {
+    background-color: var(--chalk);
+    color: var(--foreground);
+    font-family: var(--font-body), system-ui, sans-serif;
+  }
+
+  ::selection {
+    background: color-mix(in oklab, var(--brass) 45%, white);
+    color: var(--pine);
+  }
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes hero-zoom {
+  from {
+    transform: scale(1.05);
+  }
+  to {
+    transform: scale(1);
+  }
+}
+
+@keyframes craft-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-rise {
+  animation: rise 0.9s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.animate-rise-delay {
+  animation: rise 0.9s cubic-bezier(0.22, 1, 0.36, 1) 0.14s both;
+}
+
+.animate-rise-delay-2 {
+  animation: rise 0.9s cubic-bezier(0.22, 1, 0.36, 1) 0.26s both;
+}
+
+.animate-hero-zoom {
+  animation: hero-zoom 10s ease-out both;
+}
+
+.animate-craft-in {
+  animation: craft-in 0.75s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes village-slow {
+  0% {
+    transform: scale(1.08) translate3d(0, 0, 0);
+  }
+  100% {
+    transform: scale(1.14) translate3d(-1.5%, -1%, 0);
+  }
+}
+
+@keyframes orb-float-a {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-12px);
+  }
+}
+
+@keyframes orb-float-b {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-16px);
+  }
+}
+
+@keyframes orb-float-c {
+  0%,
+  100% {
+    transform: translateY(0) translateX(0);
+  }
+  50% {
+    transform: translateY(-10px) translateX(6px);
+  }
+}
+
+@keyframes orb-float-d {
+  0%,
+  100% {
+    transform: translateY(0) translateX(0);
+  }
+  50% {
+    transform: translateY(-14px) translateX(-5px);
+  }
+}
+
+.animate-village-slow {
+  animation: village-slow 32s ease-in-out infinite alternate;
+}
+
+.animate-orb-a {
+  animation: orb-float-a 7s ease-in-out infinite;
+}
+
+.animate-orb-b {
+  animation: orb-float-b 8.5s ease-in-out infinite 0.6s;
+}
+
+.animate-orb-c {
+  animation: orb-float-c 6.5s ease-in-out infinite 1s;
+}
+
+.animate-orb-d {
+  animation: orb-float-d 9s ease-in-out infinite 0.3s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-village-slow,
+  .animate-orb-a,
+  .animate-orb-b,
+  .animate-orb-c,
+  .animate-orb-d {
+    animation: none;
+  }
+}
+
+.font-display {
+  font-family: var(--font-display), system-ui, sans-serif;
+}
+
+.craft-rule {
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in oklab, var(--pine) 22%, transparent),
+    transparent
+  );
+}
