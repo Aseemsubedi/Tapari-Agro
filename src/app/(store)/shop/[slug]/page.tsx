@@ -1,11 +1,19 @@
 import type { Metadata } from "next";
-import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AddToCartButton } from "@/components/add-to-cart-button";
+import { JsonLd } from "@/components/json-ld";
+import { LocalProductAvailabilityNotice } from "@/components/local-product-availability-notice";
+import { ProtectedProductImage } from "@/components/protected-product-image";
+import { SuggestedProducts } from "@/components/suggested-products";
 import { formatRate } from "@/lib/format";
 import { getProductBySlug, getProducts } from "@/lib/catalog";
-import { ProductTile } from "@/components/product-tile";
+import {
+  breadcrumbJsonLd,
+  buildPageMetadata,
+  productJsonLd,
+  siteSeo,
+} from "@/lib/seo";
 import { callLink, shopConfig, whatsappLink } from "@/lib/shop";
 
 type Props = {
@@ -15,11 +23,38 @@ type Props = {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const product = await getProductBySlug(slug);
-  if (!product) return { title: "Product" };
-  return {
+  if (!product) {
+    return buildPageMetadata({
+      title: "Product not found",
+      description: siteSeo.defaultDescription,
+      path: `/shop/${slug}`,
+      noIndex: true,
+    });
+  }
+
+  const category = product.categories[0]?.name;
+  const rate = formatRate(product.price, product.unit);
+  const blurb =
+    product.shortDescription?.trim() ||
+    product.description?.trim().slice(0, 140) ||
+    `Buy ${product.name} from Tapari Agro.`;
+  const description = `${blurb} ${rate.full}${
+    category ? ` · ${category}` : ""
+  }. Organic from Nepal hills — order online or WhatsApp.`;
+
+  return buildPageMetadata({
     title: product.name,
-    description: product.shortDescription,
-  };
+    description: description.slice(0, 160),
+    path: `/shop/${product.slug}`,
+    image: product.images[0]?.src,
+    keywords: [
+      product.name,
+      category ?? "organic grocery",
+      "Tapari Agro",
+      "organic Nepal",
+      "buy online Kathmandu",
+    ].filter(Boolean) as string[],
+  });
 }
 
 export default async function ProductPage({ params }: Props) {
@@ -27,29 +62,26 @@ export default async function ProductPage({ params }: Props) {
   const product = await getProductBySlug(slug);
   if (!product) notFound();
 
+  const allProducts = await getProducts();
   const image = product.images[0];
   const category = product.categories[0]?.name;
   const rate = formatRate(product.price, product.unit);
   const wa = whatsappLink(
-    `Hello — I'd like to order: ${product.name} (${rate.amount} ${rate.unitLabel})`,
+    `Hello — I'd like to order: ${product.name} (${rate.full})`,
   );
 
-  const related = (await getProducts())
-    .filter((p) => p.id !== product.id)
-    .filter((p) =>
-      category ? p.categories[0]?.name === category : true,
-    )
-    .slice(0, 4);
-
-  const relatedFallback =
-    related.length > 0
-      ? related
-      : (await getProducts())
-          .filter((p) => p.id !== product.id)
-          .slice(0, 4);
-
   return (
-    <div className="pb-28">
+    <div className="bg-white">
+      <JsonLd
+        data={[
+          breadcrumbJsonLd([
+            { name: "Home", path: "/" },
+            { name: "Shop", path: "/shop" },
+            { name: product.name, path: `/shop/${product.slug}` },
+          ]),
+          productJsonLd(product),
+        ]}
+      />
       <div className="mx-auto w-full max-w-5xl px-4 pt-10 sm:px-8 sm:pt-12">
         <Link
           href="/shop"
@@ -58,16 +90,18 @@ export default async function ProductPage({ params }: Props) {
           ← Back to shop
         </Link>
 
-        <div className="mt-6 grid gap-8 sm:mt-8 sm:gap-10 lg:grid-cols-2 lg:items-start lg:gap-14">
+        <div className="mt-6 grid gap-8 pb-12 sm:mt-8 sm:gap-10 lg:grid-cols-2 lg:items-start lg:gap-14 lg:pb-16">
           <div className="relative mx-auto aspect-square w-full max-w-sm overflow-hidden bg-mist ring-1 ring-pine/10 sm:max-w-md lg:mx-0 lg:max-w-none">
             {image ? (
-              <Image
+              <ProtectedProductImage
                 src={image.src}
                 alt={image.alt}
                 fill
                 priority
+                watermark="lg"
                 className="object-cover object-center"
                 sizes="(max-width: 1024px) 80vw, 480px"
+                quality={90}
               />
             ) : null}
           </div>
@@ -82,12 +116,17 @@ export default async function ProductPage({ params }: Props) {
               {product.name}
             </h1>
             <p className="mt-4 flex flex-wrap items-baseline gap-x-2 gap-y-1">
-              <span className="font-display text-4xl font-extrabold leading-none tracking-tight text-pine tabular-nums sm:text-5xl">
+              <span className="text-lg font-bold tracking-wide text-pine sm:text-xl">
+                {rate.prefix}
+              </span>
+              <span className="text-4xl font-extrabold leading-none tracking-tight text-pine tabular-nums sm:text-5xl">
                 {rate.amount}
               </span>
-              <span className="text-base font-semibold tracking-wide text-ink/55 sm:text-lg">
-                {rate.unitLabel}
-              </span>
+              {rate.unitLabel ? (
+                <span className="text-base font-semibold tracking-wide text-ink/50 sm:text-lg">
+                  {rate.unitLabel}
+                </span>
+              ) : null}
             </p>
             <p className="mt-5 max-w-md text-[15px] leading-relaxed text-ink/60">
               {product.shortDescription}
@@ -114,6 +153,7 @@ export default async function ProductPage({ params }: Props) {
             <p className="mt-5 text-[11px] leading-relaxed text-ink/40">
               Packed to order · phone confirm · COD available
             </p>
+            <LocalProductAvailabilityNotice className="mt-4 max-w-md" />
             <div className="craft-rule my-8 max-w-[10rem]" />
             <p className="max-w-md whitespace-pre-line text-sm leading-relaxed text-ink/60">
               {product.description}
@@ -122,18 +162,11 @@ export default async function ProductPage({ params }: Props) {
         </div>
       </div>
 
-      {relatedFallback.length > 0 ? (
-        <section className="mx-auto mt-16 w-full max-w-5xl border-t border-pine/8 px-4 pt-12 sm:mt-20 sm:px-8 sm:pt-14">
-          <h2 className="mb-8 font-display text-2xl font-bold tracking-tight text-pine">
-            More staples
-          </h2>
-          <div className="grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-4 sm:gap-x-6">
-            {relatedFallback.map((item) => (
-              <ProductTile key={item.id} product={item} />
-            ))}
-          </div>
-        </section>
-      ) : null}
+      <SuggestedProducts
+        products={allProducts}
+        excludeIds={[product.id]}
+        title="Suggested products"
+      />
     </div>
   );
 }

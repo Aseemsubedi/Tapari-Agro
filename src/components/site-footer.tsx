@@ -1,5 +1,8 @@
+"use client";
+
 import Image from "next/image";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { BrandLogo } from "@/components/brand-logo";
 import { callLink, shopConfig, whatsappLink } from "@/lib/shop";
 
@@ -22,10 +25,13 @@ function PhoneIcon({ className }: { className?: string }) {
 }
 
 export function SiteFooter() {
+  const pathname = usePathname();
   const year = new Date().getFullYear();
+  const onCheckout =
+    pathname.startsWith("/cart") || pathname.startsWith("/order");
 
   return (
-    <footer className="relative mt-auto bg-pine pb-28 text-chalk sm:pb-24">
+    <footer className="relative mt-auto bg-pine text-chalk">
       <svg
         className="pointer-events-none absolute inset-x-0 bottom-0 h-28 w-full overflow-hidden text-chalk/[0.04] sm:h-36"
         viewBox="0 0 1200 140"
@@ -65,13 +71,8 @@ export function SiteFooter() {
                 </Link>
               </li>
               <li>
-                <Link href="/blogs" className="transition hover:text-brass">
-                  Blogs
-                </Link>
-              </li>
-              <li>
                 <Link href="/about" className="transition hover:text-brass">
-                  About
+                  Our Story
                 </Link>
               </li>
               <li>
@@ -81,7 +82,7 @@ export function SiteFooter() {
               </li>
               <li>
                 <Link href="/cart" className="transition hover:text-brass">
-                  Bag
+                  Cart
                 </Link>
               </li>
             </ul>
@@ -163,6 +164,24 @@ export function SiteFooter() {
         <div className="mt-6 flex flex-col gap-3 border-t border-chalk/10 py-6 text-xs text-chalk/45 sm:flex-row sm:items-center sm:justify-between">
           <p>© {year} Tapari Agro. All rights reserved.</p>
           <p className="tracking-wide">Parbat · Myagdi · Mustang</p>
+        </div>
+      </div>
+
+      {/* Blinkit-style closing tagline */}
+      <div
+        className={`relative border-t border-black/[0.04] bg-[#f3f4f6] ${
+          onCheckout ? "pb-8" : "pb-20 sm:pb-12"
+        }`}
+      >
+        <div className="mx-auto w-full max-w-5xl px-4 py-10 sm:px-8 sm:py-12">
+          <p className="font-display text-[2rem] font-extrabold leading-[1.15] tracking-tight text-[#c5cad1] sm:text-[2.75rem] md:text-[3.25rem]">
+            Nepal Local
+            <br />
+            Store{" "}
+            <span className="inline-block text-[#f07167]" aria-hidden>
+              ♥
+            </span>
+          </p>
         </div>
       </div>
     </footer>

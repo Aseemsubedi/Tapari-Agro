@@ -11,20 +11,27 @@ export async function proxy(request: NextRequest) {
     return NextResponse.next();
   }
 
+  const requestHeaders = new Headers(request.headers);
+  requestHeaders.set("x-admin-pathname", pathname);
+
   if (pathname === "/admin/login") {
-    return NextResponse.next();
+    return NextResponse.next({
+      request: { headers: requestHeaders },
+    });
   }
 
   const token = request.cookies.get(COOKIE)?.value;
   const secret = process.env.ADMIN_SESSION_SECRET;
 
-  if (!token || !secret) {
+  if (!token || !secret || secret.length < 16) {
     return NextResponse.redirect(new URL("/admin/login", request.url));
   }
 
   try {
     await jwtVerify(token, new TextEncoder().encode(secret));
-    return NextResponse.next();
+    return NextResponse.next({
+      request: { headers: requestHeaders },
+    });
   } catch {
     return NextResponse.redirect(new URL("/admin/login", request.url));
   }

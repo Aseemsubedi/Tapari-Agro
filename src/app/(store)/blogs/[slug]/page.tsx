@@ -2,7 +2,14 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { JsonLd } from "@/components/json-ld";
 import { getBlogBySlug, getBlogPosts } from "@/lib/blogs";
+import {
+  articleJsonLd,
+  breadcrumbJsonLd,
+  buildPageMetadata,
+  siteSeo,
+} from "@/lib/seo";
 
 type Props = {
   params: Promise<{ slug: string }>;
@@ -15,11 +22,28 @@ export async function generateStaticParams() {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const post = getBlogBySlug(slug);
-  if (!post) return { title: "Blog" };
-  return {
+  if (!post) {
+    return buildPageMetadata({
+      title: "Blog",
+      description: siteSeo.defaultDescription,
+      path: `/blogs/${slug}`,
+      noIndex: true,
+    });
+  }
+
+  return buildPageMetadata({
     title: post.title,
     description: post.excerpt,
-  };
+    path: `/blogs/${post.slug}`,
+    image: post.image,
+    keywords: [
+      post.title,
+      post.category,
+      "Tapari Agro",
+      "organic Nepal",
+      "kishan",
+    ],
+  });
 }
 
 export default async function BlogPostPage({ params }: Props) {
@@ -29,6 +53,16 @@ export default async function BlogPostPage({ params }: Props) {
 
   return (
     <article className="mx-auto w-full max-w-3xl px-4 pb-28 pt-12 sm:px-8 sm:pt-16">
+      <JsonLd
+        data={[
+          breadcrumbJsonLd([
+            { name: "Home", path: "/" },
+            { name: "Blogs", path: "/blogs" },
+            { name: post.title, path: `/blogs/${post.slug}` },
+          ]),
+          articleJsonLd(post),
+        ]}
+      />
       <Link
         href="/blogs"
         className="text-[13px] font-medium text-ink/40 transition hover:text-ink"

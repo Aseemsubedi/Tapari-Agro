@@ -1,21 +1,30 @@
 export function formatNpr(amount: string | number): string {
   const value = typeof amount === "string" ? Number.parseFloat(amount) : amount;
   if (Number.isNaN(value)) return "Rs —";
-  return new Intl.NumberFormat("en-NP", {
-    style: "currency",
-    currency: "NPR",
+  const digits = new Intl.NumberFormat("en-NP", {
     maximumFractionDigits: 0,
   }).format(value);
+  return `Rs ${digits}`;
 }
 
-/** Large shop rate: NPR amount + / unit */
+/** Shop rate parts for clear display: Rs + amount + / unit */
 export function formatRate(
   amount: string | number,
   unit = "1 pack",
-): { amount: string; unitLabel: string } {
+): { prefix: string; amount: string; unitLabel: string; full: string } {
+  const value = typeof amount === "string" ? Number.parseFloat(amount) : amount;
+  if (Number.isNaN(value)) {
+    return { prefix: "Rs", amount: "—", unitLabel: "", full: "Rs —" };
+  }
+  const digits = new Intl.NumberFormat("en-NP", {
+    maximumFractionDigits: 0,
+  }).format(value);
+  const unitLabel = unit.trim() ? `/ ${unit.trim()}` : "";
   return {
-    amount: formatNpr(amount),
-    unitLabel: unit.trim() ? `/ ${unit.trim()}` : "",
+    prefix: "Rs",
+    amount: digits,
+    unitLabel,
+    full: unitLabel ? `Rs ${digits} ${unitLabel}` : `Rs ${digits}`,
   };
 }
 

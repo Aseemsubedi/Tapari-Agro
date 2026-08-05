@@ -1,50 +1,74 @@
-import type { Metadata } from "next";
+import { JsonLd } from "@/components/json-ld";
 import { ShopBrowser } from "@/components/shop-browser";
 import { getProducts } from "@/lib/catalog";
+import {
+  absoluteUrl,
+  breadcrumbJsonLd,
+  buildPageMetadata,
+} from "@/lib/seo";
 
-export const metadata: Metadata = {
-  title: "Shop",
+export const metadata = buildPageMetadata({
+  title: "Shop organic spices, grains & honey",
   description:
-    "Organic spices, grains, honey and oils from the hills — Tapari Agro.",
-};
+    "Browse organic spices, hill rice, honey, mustard oil and kitchen staples from Parbat, Myagdi & Mustang. Search and order online — Kathmandu Valley delivery.",
+  path: "/shop",
+  keywords: [
+    "organic shop Nepal",
+    "buy spices online Kathmandu",
+    "organic honey Nepal",
+    "mustard oil Nepal",
+    "hill rice Nepal",
+    "Tapari Agro shop",
+  ],
+});
 
 type Props = {
   searchParams: Promise<{
     category?: string;
-    sort?: string;
-    price?: string;
-    stock?: string;
+    q?: string;
   }>;
 };
 
 export default async function ShopPage({ searchParams }: Props) {
-  const { category, sort, price, stock } = await searchParams;
+  const { category, q } = await searchParams;
   const products = await getProducts();
 
-  return (
-    <div className="pb-28">
-      <header className="border-b border-pine/8 bg-mist">
-        <div className="mx-auto w-full max-w-5xl px-4 py-10 sm:px-8 sm:py-12">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-leaf">
-            Organic shop
-          </p>
-          <h1 className="mt-2 font-display text-4xl font-bold tracking-tight text-pine sm:text-5xl">
-            Shop
-          </h1>
-          <p className="mt-3 max-w-md text-sm leading-relaxed text-ink/55">
-            Fresh staples from Parbat, Myagdi &amp; Mustang — packed to order,
-            priced in NPR.
-          </p>
-        </div>
-      </header>
+  const itemList = {
+    "@context": "https://schema.org",
+    "@type": "CollectionPage",
+    name: "Tapari Agro Shop",
+    description:
+      "Organic kitchen staples from Parbat, Myagdi and Mustang hills.",
+    url: absoluteUrl("/shop"),
+    mainEntity: {
+      "@type": "ItemList",
+      numberOfItems: products.length,
+      itemListElement: products.slice(0, 40).map((product, index) => ({
+        "@type": "ListItem",
+        position: index + 1,
+        url: absoluteUrl(`/shop/${product.slug}`),
+        name: product.name,
+      })),
+    },
+  };
 
-      <div className="mx-auto w-full max-w-5xl px-4 pt-8 sm:px-8 sm:pt-10">
+  return (
+    <div className="bg-[#f6f7f9]">
+      <JsonLd
+        data={[
+          breadcrumbJsonLd([
+            { name: "Home", path: "/" },
+            { name: "Shop", path: "/shop" },
+          ]),
+          itemList,
+        ]}
+      />
+      <h1 className="sr-only">Shop organic staples</h1>
+      <div className="mx-auto w-full max-w-5xl px-4 py-5 sm:px-8 sm:py-7">
         <ShopBrowser
           products={products}
           initialCategory={category ?? "All"}
-          initialSort={sort}
-          initialPrice={price}
-          initialStock={stock}
+          initialQuery={q ?? ""}
         />
       </div>
     </div>

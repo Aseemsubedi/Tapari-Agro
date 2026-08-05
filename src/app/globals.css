@@ -13,6 +13,8 @@
   --lime: #7eb52e;
   --background: var(--chalk);
   --foreground: var(--ink);
+  --store-header-h: 7.25rem;
+  --store-bottom-h: 4.5rem;
 }
 
 @theme inline {
@@ -29,18 +31,28 @@
   --color-lime: var(--lime);
   --font-sans: var(--font-body);
   --font-display: var(--font-display);
+  --font-nepali: var(--font-nepali);
 }
 
 @layer base {
   body {
     background-color: var(--chalk);
     color: var(--foreground);
-    font-family: var(--font-body), system-ui, sans-serif;
+    font-family: var(--font-body), var(--font-nepali), system-ui, sans-serif;
   }
 
   ::selection {
     background: color-mix(in oklab, var(--brass) 45%, white);
     color: var(--pine);
+  }
+
+  .protected-product-image {
+    -webkit-touch-callout: none;
+  }
+
+  .protected-product-image__photo {
+    -webkit-user-drag: none;
+    user-select: none;
   }
 }
 
@@ -164,18 +176,83 @@
   animation: orb-float-d 9s ease-in-out infinite 0.3s;
 }
 
+@keyframes cart-bump {
+  0% {
+    transform: scale(1);
+  }
+  35% {
+    transform: scale(1.08);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes cart-badge {
+  0% {
+    transform: scale(0.7);
+  }
+  40% {
+    transform: scale(1.25);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes cart-toast {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-cart-bump {
+  animation: cart-bump 0.55s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.animate-cart-badge {
+  animation: cart-badge 0.55s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.animate-cart-toast {
+  animation: cart-toast 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes help-blink {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+
+.animate-help-blink {
+  animation: help-blink 1.4s ease-in-out infinite;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .animate-village-slow,
   .animate-orb-a,
   .animate-orb-b,
   .animate-orb-c,
-  .animate-orb-d {
+  .animate-orb-d,
+  .animate-cart-bump,
+  .animate-cart-badge,
+  .animate-cart-toast,
+  .animate-help-blink {
     animation: none;
   }
 }
 
 .font-display {
-  font-family: var(--font-display), system-ui, sans-serif;
+  font-family: var(--font-display), var(--font-nepali), system-ui, sans-serif;
 }
 
 .craft-rule {

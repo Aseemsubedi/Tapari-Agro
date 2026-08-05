@@ -8,13 +8,13 @@ type BrandLogoProps = {
 };
 
 const sizes = {
-  header: { width: 148, height: 70, className: "h-9 w-auto sm:h-11" },
+  header: { width: 148, height: 70, className: "h-8 w-auto sm:h-12" },
   footer: { width: 200, height: 94, className: "h-12 w-auto sm:h-14" },
   hero: { width: 280, height: 130, className: "h-16 w-auto sm:h-[4.75rem]" },
 } as const;
 
-const LOGO_BADGE = "/images/tapari-logo-badge.jpg";
-const LOGO_MARK = "/images/tapari-logo-mark.jpg";
+export const LOGO_BADGE = "/images/tapari-logo-badge.jpg";
+export const LOGO_MARK = "/images/tapari-logo-mark.jpg";
 
 export function BrandLogo({
   href = "/",

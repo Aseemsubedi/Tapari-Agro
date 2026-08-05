@@ -7,20 +7,157 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model Category {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  slug      String   @unique
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Unit {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
 model Product {
   id          String      @id @default(cuid())
   name        String
   slug        String      @unique
   description String      @default("")
+  /// Selling price (NPR) shown on storefront
   price       Int
+  /// Cost / purchase price (NPR) — admin only (owned stock avg)
+  costPrice   Int         @default(0)
   unit        String      @default("1 pack")
   imageUrl    String      @default("")
   category    String      @default("")
+  /// Owned on-hand units (warehouse / FIFO lots)
   stock       Int         @default(0)
+  /// owned | digital | hybrid
+  inventoryMode String    @default("owned")
+  /// Supplier-owned units available to sell (digital / hybrid)
+  digitalAvailable Int    @default(0)
+  /// Primary seller for digital fulfillment
+  sellerVendorId String?
+  /// Agreed payout per unit to seller (NPR) for digital lines
+  sellerUnitCost Int      @default(0)
+  /// Fast-mover / must-not-run-out — pin on Out of stock desk
+  essential   Boolean     @default(false)
   published   Boolean     @default(true)
+  /// Visible in the online shop / website
+  sellOnline  Boolean     @default(true)
+  /// Available for offline / physical shop sales
+  sellOffline Boolean     @default(true)
+  /// Legacy homepage pin (replaced by HomeSection)
+  featuredOnHome Boolean  @default(false)
+  homeSortOrder  Int      @default(0)
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
   orderItems  OrderItem[]
+  purchases   StockPurchase[]
+  homeSections HomeSectionProduct[]
+  vendors     ProductVendor[]
+  sellerVendor Vendor?    @relation("ProductSeller", fields: [sellerVendorId], references: [id], onDelete: SetNull)
+
+  @@index([sellerVendorId])
+  @@index([inventoryMode])
+  @@index([essential])
+}
+
+model HomeSection {
+  id        String               @id @default(cuid())
+  title     String
+  /// Small label above the title (e.g. “From the hills”)
+  eyebrow   String               @default("")
+  sortOrder Int                  @default(0)
+  published Boolean              @default(true)
+  createdAt DateTime             @default(now())
+  updatedAt DateTime             @updatedAt
+  products  HomeSectionProduct[]
+}
+
+model HomeSectionProduct {
+  id        String      @id @default(cuid())
+  sectionId String
+  productId String
+  sortOrder Int         @default(0)
+  section   HomeSection @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  product   Product     @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([sectionId, productId])
+  @@index([sectionId])
+}
+
+model Vendor {
+  id        String          @id @default(cuid())
+  name      String          @unique
+  phone     String          @default("")
+  address   String          @default("")
+  note      String          @default("")
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+  purchases StockPurchase[]
+  products  ProductVendor[]
+  sellerProducts Product[]  @relation("ProductSeller")
+  settlements SellerSettlement[]
+}
+
+/// Preferred / linked suppliers for a product (many-to-many)
+model ProductVendor {
+  id        String   @id @default(cuid())
+  productId String
+  vendorId  String
+  createdAt DateTime @default(now())
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  vendor    Vendor   @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+
+  @@unique([productId, vendorId])
+  @@index([productId])
+  @@index([vendorId])
+}
+
+model StockPurchase {
+  id        String    @id @default(cuid())
+  /// Shared id for all lines recorded in one bill submit
+  batchId   String    @default("")
+  productId String
+  vendorId  String?
+  /// Supplier / kishan bill or invoice number
+  billNo    String    @default("")
+  quantity  Int
+  /// Units still on hand from this lot (FIFO). Digital reservations also use this.
+  remainingQty Int    @default(0)
+  /// owned = warehouse lot · digital = supplier-held availability
+  stockKind String    @default("owned")
+  /// Unit cost paid (NPR)
+  unitCost  Int
+  /// NPR paid toward this line (supports partial bill payment)
+  amountPaid Int     @default(0)
+  /// Whether this bill line is fully paid to the vendor
+  paid      Boolean   @default(false)
+  /// How supplier was paid: cash | bank | cheque (empty if unpaid)
+  payMethod String    @default("")
+  /// Cheque number (when payMethod = cheque)
+  chequeNo  String    @default("")
+  /// Cheque date (when payMethod = cheque)
+  chequeDate DateTime?
+  /// Best-before / expiry for this lot (optional)
+  expiresAt DateTime?
+  note      String    @default("")
+  createdAt DateTime  @default(now())
+  product   Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  vendor    Vendor?   @relation(fields: [vendorId], references: [id], onDelete: SetNull)
+  orderItemLots OrderItemDigitalLot[]
+
+  @@index([batchId])
+  @@index([productId, remainingQty])
+  @@index([vendorId])
+  @@index([stockKind])
 }
 
 model Order {
@@ -29,11 +166,39 @@ model Order {
   phone        String
   address      String
   notes        String      @default("")
+  /// online (website) | offline (counter / shop)
+  channel      String      @default("online")
+  /// What customer chose at checkout: cash (COD) | bank_qr | bank — keep for audit
+  checkoutMethod String   @default("cash")
+  /// How money was received / bill type: cash | bank_qr | bank | other | credit | partial
+  paymentMethod String     @default("")
+  /// paid | unpaid | partial
+  paymentStatus String     @default("unpaid")
+  /// NPR received toward this bill (supports partial offline payment)
+  amountPaid   Int         @default(0)
+  /// Free-text remarks for offline sales / counter notes
+  remarks      String      @default("")
+  /// Extra note when collected via “other” (or bank ref)
+  paymentNote  String      @default("")
   status       String      @default("pending")
+  /// Digital supplier stock gathered for packing (admin marks when ready)
+  supplierStockReceived Boolean @default(false)
+  /// Owned/digital inventory already deducted for this order
+  inventoryHeld Boolean @default(false)
+  /// Sum of line totals before discount (NPR)
+  subtotal     Int         @default(0)
+  /// Discount applied (NPR)
+  discountAmount Int       @default(0)
+  /// Discount percent entered (0–100); 0 if amount-only
+  discountPercent Int      @default(0)
+  /// Payable after discount + delivery (NPR)
   total        Int
+  /// Delivery / shipping fee (NPR)
+  deliveryFee  Int         @default(0)
   createdAt    DateTime    @default(now())
   updatedAt    DateTime    @updatedAt
   items        OrderItem[]
+  settlements  SellerSettlement[]
 }
 
 model OrderItem {
@@ -41,8 +206,116 @@ model OrderItem {
   orderId   String
   productId String
   name      String
+  /// Selling unit price (NPR) at time of sale
   price     Int
+  /// Blended unit cost (NPR) for profit — owned cost and/or seller payout
+  unitCost  Int     @default(0)
   quantity  Int
+  /// owned | digital | hybrid (how this line was sourced)
+  fulfillMode String @default("owned")
+  /// Units taken from Tapari owned stock
+  ownedQty  Int     @default(0)
+  /// Units reserved / taken from digital (supplier) stock
+  digitalQty Int    @default(0)
+  /// True once digitalAvailable was decremented for digitalQty
+  digitalReserved Boolean @default(false)
+  /// Seller for digital portion (primary / first slice; see OrderItemDigitalLot)
+  vendorId  String?
+  /// Snapshotted blended seller payout per unit (NPR) for digital portion
+  sellerUnitCost Int @default(0)
   order     Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
   product   Product @relation(fields: [productId], references: [id])
+  settlement SellerSettlement[]
+  digitalLots OrderItemDigitalLot[]
+}
+
+/// Which digital reservation lots were reserved for an order line (multi-supplier)
+model OrderItemDigitalLot {
+  id              String @id @default(cuid())
+  orderItemId     String
+  stockPurchaseId String
+  vendorId        String
+  quantity        Int
+  unitCost        Int
+  orderItem       OrderItem     @relation(fields: [orderItemId], references: [id], onDelete: Cascade)
+  stockPurchase   StockPurchase @relation(fields: [stockPurchaseId], references: [id], onDelete: Restrict)
+
+  @@index([orderItemId])
+  @@index([stockPurchaseId])
+  @@index([vendorId])
+}
+
+/// Amount owed to a supplier after a digital / hybrid sale completes
+model SellerSettlement {
+  id          String   @id @default(cuid())
+  vendorId    String
+  orderId     String
+  orderItemId String
+  productName String   @default("")
+  quantity    Int
+  unitCost    Int
+  /// qty × unitCost
+  amount      Int
+  amountPaid  Int      @default(0)
+  paid        Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  vendor      Vendor   @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  order       Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  orderItem   OrderItem @relation(fields: [orderItemId], references: [id], onDelete: Cascade)
+
+  @@unique([orderItemId, vendorId])
+  @@index([vendorId, paid])
+  @@index([orderId])
+  @@index([paid, createdAt])
+}
+
+/// Immutable money-in / money-out events (customer collect, supplier pay, seller settle)
+model PaymentEvent {
+  id          String   @id @default(cuid())
+  /// collect | pay | settle | writeoff
+  direction   String
+  /// NPR moved in this event (0 when clearing a balance)
+  amount      Int
+  /// Bill amountPaid before this event
+  previousPaid Int     @default(0)
+  /// Bill amountPaid after this event
+  balanceAfter Int     @default(0)
+  /// cash | bank_qr | bank | cheque | other | credit | clear | …
+  method      String   @default("")
+  note        String   @default("")
+  chequeNo    String   @default("")
+  chequeDate  DateTime?
+  partyName   String   @default("")
+  partyPhone  String   @default("")
+  /// Linked customer order (when direction = collect)
+  orderId     String   @default("")
+  /// Linked purchase batch (when direction = pay) or settlement id (settle)
+  batchId     String   @default("")
+  /// Display ref e.g. #abc12345 or Bill 12
+  refLabel    String   @default("")
+  createdAt   DateTime @default(now())
+
+  @@index([direction, createdAt])
+  @@index([orderId])
+  @@index([batchId])
+  @@index([createdAt])
+}
+
+/// Saved shop customers (phone + up to 2 delivery addresses)
+model Customer {
+  id        String   @id @default(cuid())
+  name      String
+  phone     String   @default("")
+  /// Digits-only phone for lookups (empty when no phone)
+  phoneKey  String   @default("")
+  /// Most recently used delivery address
+  address1  String   @default("")
+  /// Second saved delivery address
+  address2  String   @default("")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([phoneKey])
+  @@index([name])
 }

@@ -2,18 +2,39 @@
 export const shopConfig = {
   name: "Tapari Agro",
   tagline: "Nepal organic kitchen staples",
-  phoneDisplay: process.env.NEXT_PUBLIC_PHONE ?? "9857630569",
-  phoneTel: (process.env.NEXT_PUBLIC_PHONE ?? "9857630569").replace(/\s+/g, ""),
-  whatsapp: (process.env.NEXT_PUBLIC_WHATSAPP ?? "9779857630569").replace(
+  phoneDisplay: process.env.NEXT_PUBLIC_PHONE ?? "9857620569",
+  phoneTel: (process.env.NEXT_PUBLIC_PHONE ?? "9857620569").replace(/\s+/g, ""),
+  whatsapp: (process.env.NEXT_PUBLIC_WHATSAPP ?? "9779857620569").replace(
     /\D/g,
     "",
   ),
-  deliveryNote: "Valley delivery · packed to order",
+  deliveryNote: "Delivery in 2 days · All over Nepal",
+  /** Blinkit-style header promise */
+  deliveryHeadline: "Delivery in 2 Days",
+  deliveryArea: "All over Nepal",
   /** Facebook reel / video or YouTube URL */
   storyVideo:
     process.env.NEXT_PUBLIC_STORY_VIDEO ??
     "https://www.facebook.com/reel/804246636044498",
+  /** Bank deposit details (Nepal Investment Mega Bank) */
+  bankName:
+    process.env.NEXT_PUBLIC_BANK_NAME ?? "Nepal Investment Mega Bank Ltd.",
+  bankAccountName:
+    process.env.NEXT_PUBLIC_BANK_ACCOUNT_NAME ?? "Tapari Agro Private Limited",
+  bankAccountNumber:
+    process.env.NEXT_PUBLIC_BANK_ACCOUNT_NUMBER ?? "0641050252355",
+  /** Public URL or /path to Fonepay QR flyer */
+  qrImage: process.env.NEXT_PUBLIC_QR_IMAGE ?? "/payments/fonepay-qr.png",
 };
+
+export function shopBankDetailsConfigured() {
+  return Boolean(
+    shopConfig.qrImage.trim() ||
+      shopConfig.bankName.trim() ||
+      shopConfig.bankAccountName.trim() ||
+      shopConfig.bankAccountNumber.trim(),
+  );
+}
 
 export type StoryEmbed =
   | { type: "facebook"; src: string }
@@ -69,7 +90,7 @@ export function storyEmbed(
 export function whatsappLink(message?: string) {
   const text = encodeURIComponent(
     message ??
-      "Hello Tapari Agro — I'd like to order from your artisan shop.",
+      "Hello Tapari Agro — I'd like to order from your shop.",
   );
   return `https://wa.me/${shopConfig.whatsapp}?text=${text}`;
 }

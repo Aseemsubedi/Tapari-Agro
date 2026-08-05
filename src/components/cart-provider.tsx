@@ -2,21 +2,32 @@
 
 import {
   createContext,
+  useCallback,
   useContext,
   useEffect,
+  useRef,
   useState,
   useTransition,
   type ReactNode,
 } from "react";
 import type { Cart, CartItem, Product } from "@/lib/types";
 
+export type CartNotice = {
+  id: number;
+  name: string;
+  quantity: number;
+} | null;
+
 type CartContextValue = {
   cart: Cart;
   isPending: boolean;
+  notice: CartNotice;
+  bump: boolean;
   addItem: (product: Product, quantity?: number) => void;
   updateQuantity: (key: string, quantity: number) => void;
   removeItem: (key: string) => void;
   clearCart: () => void;
+  clearNotice: () => void;
 };
 
 const CartContext = createContext<CartContextValue | null>(null);
@@ -55,6 +66,11 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const [cart, setCart] = useState<Cart>(emptyCart);
   const [ready, setReady] = useState(false);
   const [isPending, startTransition] = useTransition();
+  const [notice, setNotice] = useState<CartNotice>(null);
+  const [bump, setBump] = useState(false);
+  const noticeTimer = useRef<number | null>(null);
+  const bumpTimer = useRef<number | null>(null);
+  const noticeId = useRef(0);
 
   useEffect(() => {
     setCart(loadCart());
@@ -65,6 +81,25 @@ export function CartProvider({ children }: { children: ReactNode }) {
     if (!ready) return;
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(cart));
   }, [cart, ready]);
+
+  useEffect(() => {
+    return () => {
+      if (noticeTimer.current) window.clearTimeout(noticeTimer.current);
+      if (bumpTimer.current) window.clearTimeout(bumpTimer.current);
+    };
+  }, []);
+
+  const pingCart = useCallback((name: string, quantity: number) => {
+    noticeId.current += 1;
+    setNotice({ id: noticeId.current, name, quantity });
+    setBump(true);
+
+    if (noticeTimer.current) window.clearTimeout(noticeTimer.current);
+    if (bumpTimer.current) window.clearTimeout(bumpTimer.current);
+
+    noticeTimer.current = window.setTimeout(() => setNotice(null), 2800);
+    bumpTimer.current = window.setTimeout(() => setBump(false), 700);
+  }, []);
 
   function commit(next: Cart) {
     startTransition(() => {
@@ -88,14 +123,17 @@ export function CartProvider({ children }: { children: ReactNode }) {
             name: product.name,
             quantity,
             price: product.price,
+            unit: product.unit,
             image: product.images[0]?.src,
             slug: product.slug,
           },
         ];
     commit(summarize(items));
+    pingCart(product.name, quantity);
   }
 
   function updateQuantity(key: string, quantity: number) {
+    const current = cart.items.find((item) => item.key === key);
     const items =
       quantity <= 0
         ? cart.items.filter((item) => item.key !== key)
@@ -103,6 +141,9 @@ export function CartProvider({ children }: { children: ReactNode }) {
             item.key === key ? { ...item, quantity } : item,
           );
     commit(summarize(items));
+    if (current && quantity > current.quantity) {
+      pingCart(current.name, quantity - current.quantity);
+    }
   }
 
   function removeItem(key: string) {
@@ -113,15 +154,22 @@ export function CartProvider({ children }: { children: ReactNode }) {
     commit(emptyCart);
   }
 
+  function clearNotice() {
+    setNotice(null);
+  }
+
   return (
     <CartContext.Provider
       value={{
         cart,
         isPending,
+        notice,
+        bump,
         addItem,
         updateQuantity,
         removeItem,
         clearCart,
+        clearNotice,
       }}
     >
       {children}

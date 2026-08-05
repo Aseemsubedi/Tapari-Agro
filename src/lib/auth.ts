@@ -46,7 +46,16 @@ export async function isAdminAuthenticated(): Promise<boolean> {
 }
 
 export function verifyAdminCredentials(email: string, password: string) {
-  const adminEmail = process.env.ADMIN_EMAIL ?? "admin@tapariagro.com";
-  const adminPassword = process.env.ADMIN_PASSWORD ?? "changeme";
+  const adminEmail = process.env.ADMIN_EMAIL;
+  const adminPassword = process.env.ADMIN_PASSWORD;
+  if (!adminEmail || !adminPassword) {
+    if (process.env.NODE_ENV === "production") {
+      return false;
+    }
+    // Dev-only fallback — never used in production without env.
+    return (
+      email === "admin@tapariagro.com" && password === "changeme"
+    );
+  }
   return email === adminEmail && password === adminPassword;
 }
