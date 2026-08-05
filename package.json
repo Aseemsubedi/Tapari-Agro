@@ -8,7 +8,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "prisma generate && next build",
-    "start": "node scripts/production-start.mjs",
+    "start": "node server.mjs",
     "start:next": "next start -H 0.0.0.0",
     "lint": "eslint",
     "db:migrate": "prisma migrate dev",

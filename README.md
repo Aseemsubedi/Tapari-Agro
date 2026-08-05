@@ -48,12 +48,11 @@ NEXT_PUBLIC_WHATSAPP=9779857620569
 
 ### B) Hostinger Deploy Web App
 
-See **[HOSTINGER.md](HOSTINGER.md)** for exact hPanel fields.
+**Entry file: `server.mjs`** — full steps in [HOSTINGER.md](HOSTINGER.md).
 
-1. Hostinger → **Websites → Add website → Node.js / Deploy Web App** → connect `Aseemsubedi/Tapari-Agro` (`main`)
-2. **Build:** `npm run build` · **Start:** `npm start` · Node **20+**
-3. Set env vars from [HOSTINGER.md](HOSTINGER.md) (`ADMIN_*`, `NEXT_PUBLIC_SITE_URL`, `DATA_DIR`, etc.)
-4. Redeploy and check **Runtime logs** if the site fails
+1. Node.js Web App → GitHub `Aseemsubedi/Tapari-Agro` (`main`)
+2. Build: `build` · Entry: `server.mjs` · Node 20+
+3. Env vars from HOSTINGER.md · Redeploy · check Runtime logs
 
 ### C) Render
 

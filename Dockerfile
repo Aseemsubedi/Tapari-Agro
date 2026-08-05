@@ -29,9 +29,10 @@ COPY --from=builder /app/.next ./.next
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/scripts ./scripts
+COPY --from=builder /app/server.mjs ./server.mjs
 COPY --from=builder /app/next.config.ts ./next.config.ts
 
 # Volume mount /data for SQLite + uploads
 VOLUME ["/data"]
 EXPOSE 3000
-CMD ["node", "scripts/production-start.mjs"]
+CMD ["node", "server.mjs"]

@@ -1,61 +1,64 @@
-# Hostinger Deploy Web App — Tapari Agro
+# Hostinger — Tapari Agro (reworked)
 
-If the site shows a blank page, 502, or “couldn't load”, the Node app usually **built** but **crashed on start**. Fix settings below, then **Redeploy**.
+Use **Node.js Web App** (not static / not PHP hosting).
 
-## Correct hPanel settings
+## Exact hPanel settings
 
 | Field | Value |
 |--------|--------|
-| Application type | **Other** (or Node) — not static |
-| Node.js version | **20** or **22** |
+| Framework / app type | **Next.js** (`next`) or **Other** |
+| Node.js | **20** or **22** |
 | Branch | `main` |
-| Install command | `npm ci` |
-| Build command | `npm run build` |
-| Start command | `npm start` |
-| Entry / startup file | leave **empty** (we use `npm start`) |
-| Output directory | `.next` (if asked) |
+| Install | `npm ci` (or leave default) |
+| Build script | `build` → runs `npm run build` |
+| **Entry file** | `server.mjs` |
+| Output directory | `.next` |
+| Start command | leave blank **or** `npm start` |
 
-Do **not** use Hostinger’s default `next start` alone — we need `npm start` so migrate + seed run.
+`server.mjs` migrates SQLite, seeds if empty, then runs Next on Hostinger’s `PORT`.
 
-## Environment variables (required)
+## Environment variables
 
-Add these in Hostinger → your app → **Environment variables**:
+Hostinger → app → **Environment variables**:
 
-```env
-NODE_ENV=production
-DATA_DIR=./data
-DATABASE_URL=file:./data/prod.db
-NEXT_PUBLIC_SITE_URL=https://YOUR-HOSTINGER-URL
-ADMIN_EMAIL=admin@tapariagro.com
-ADMIN_PASSWORD=pick-a-strong-password
-ADMIN_SESSION_SECRET=paste-a-long-random-string-at-least-16-chars
-NEXT_PUBLIC_PHONE=9857620569
-NEXT_PUBLIC_WHATSAPP=9779857620569
+| Key | Value |
+|-----|--------|
+| `NODE_ENV` | `production` |
+| `DATA_DIR` | `./data` |
+| `DATABASE_URL` | `file:./data/prod.db` |
+| `NEXT_PUBLIC_SITE_URL` | `https://YOUR-DOMAIN` (Hostinger URL or tapariagro.com) |
+| `ADMIN_EMAIL` | `admin@tapariagro.com` |
+| `ADMIN_PASSWORD` | strong password |
+| `ADMIN_SESSION_SECRET` | 32+ random characters (optional — auto-created in `./data` if missing) |
+| `NEXT_PUBLIC_PHONE` | `9857620569` |
+| `NEXT_PUBLIC_WHATSAPP` | `9779857620569` |
+
+## Redeploy
+
+1. Save settings  
+2. **Deploy** / **Redeploy** from GitHub `main`  
+3. Open **Runtime logs** — look for:
+
+```
+[start] DATABASE_URL=file:…/data/prod.db
+All migrations have been successfully applied
+[start] Catalog has … products
+✓ Ready
 ```
 
-Replace `YOUR-HOSTINGER-URL` with the real domain Hostinger gave you (e.g. `https://something.hostingersite.com` or `https://tapariagro.com`).
+4. Open `/` and `/shop`  
+5. Admin: `/admin`
 
-## After deploy
+## If it still fails
 
-1. Open **Runtime logs** in hPanel — you should see:
-   - `[start] DATABASE_URL=file:…/data/prod.db`
-   - `All migrations have been successfully applied`
-   - `Catalog … products` or `running seed`
-   - `Ready` from Next.js
-2. Visit `/` and `/shop`
-3. Admin: `/admin` with the email/password you set
+| Log / symptom | Fix |
+|---------------|-----|
+| 502 / not responding | Entry file must be `server.mjs` (not empty `next start` only) |
+| `Cannot find module 'prisma'` | Redeploy latest `main` |
+| Build failed | Node 20+, check build logs for TypeScript/Prisma errors |
+| Blank / couldn't load | Runtime logs — usually DB migrate; wipe `./data` only if schema is corrupt, then redeploy |
+| Domain not connected | Attach domain in Hostinger → Domains, set `NEXT_PUBLIC_SITE_URL` |
 
-## Common failures
+## Repo
 
-| Symptom | Fix |
-|---------|-----|
-| Build OK, site 502 / not responding | Start command must be `npm start`; check Runtime logs |
-| `Cannot find module prisma` / migrate fails | Redeploy latest `main` (prisma is now a production dependency) |
-| `essential does not exist` | Redeploy latest `main` (baseline migration fixed) |
-| Admin login broken | Set `ADMIN_SESSION_SECRET` ≥ 16 characters |
-| Wrong database wiped each deploy | Keep `DATA_DIR=./data` (persists on Hostinger app disk) |
-
-## Redeploy from GitHub
-
-Repo: https://github.com/Aseemsubedi/Tapari-Agro  
-Branch: `main` — push triggers redeploy if GitHub is connected.
+https://github.com/Aseemsubedi/Tapari-Agro · branch `main`
