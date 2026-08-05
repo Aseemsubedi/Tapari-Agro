@@ -1,64 +1,44 @@
-# Hostinger — Tapari Agro (reworked)
+# Hostinger — Tapari Agro
 
-Use **Node.js Web App** (not static / not PHP hosting).
+Build can succeed while the site still fails. Hostinger’s Next preset often runs **`next start` only**, which used to skip DB migrate/seed.
 
-## Exact hPanel settings
+Latest `main` fixes that: **`src/instrumentation.ts`** boots the database even when Entry file is ignored.
+
+## hPanel settings (use these)
 
 | Field | Value |
 |--------|--------|
-| Framework / app type | **Next.js** (`next`) or **Other** |
-| Node.js | **20** or **22** |
+| Node | **20** or **22** |
 | Branch | `main` |
-| Install | `npm ci` (or leave default) |
-| Build script | `build` → runs `npm run build` |
-| **Entry file** | `server.mjs` |
-| Output directory | `.next` |
-| Start command | leave blank **or** `npm start` |
+| Build | `build` |
+| Entry file | `server.mjs` (preferred) |
+| Output | `.next` |
 
-`server.mjs` migrates SQLite, seeds if empty, then runs Next on Hostinger’s `PORT`.
+If Entry file cannot be set, Redeploy anyway — instrumentation still runs migrate/seed on `next start`.
 
 ## Environment variables
 
-Hostinger → app → **Environment variables**:
-
-| Key | Value |
-|-----|--------|
-| `NODE_ENV` | `production` |
-| `DATA_DIR` | `./data` |
-| `DATABASE_URL` | `file:./data/prod.db` |
-| `NEXT_PUBLIC_SITE_URL` | `https://YOUR-DOMAIN` (Hostinger URL or tapariagro.com) |
-| `ADMIN_EMAIL` | `admin@tapariagro.com` |
-| `ADMIN_PASSWORD` | strong password |
-| `ADMIN_SESSION_SECRET` | 32+ random characters (optional — auto-created in `./data` if missing) |
-| `NEXT_PUBLIC_PHONE` | `9857620569` |
-| `NEXT_PUBLIC_WHATSAPP` | `9779857620569` |
-
-## Redeploy
-
-1. Save settings  
-2. **Deploy** / **Redeploy** from GitHub `main`  
-3. Open **Runtime logs** — look for:
-
-```
-[start] DATABASE_URL=file:…/data/prod.db
-All migrations have been successfully applied
-[start] Catalog has … products
-✓ Ready
+```env
+NODE_ENV=production
+DATA_DIR=./data
+DATABASE_URL=file:./data/prod.db
+NEXT_PUBLIC_SITE_URL=https://YOUR-REAL-URL
+ADMIN_EMAIL=admin@tapariagro.com
+ADMIN_PASSWORD=your-strong-password
+ADMIN_SESSION_SECRET=optional-32-plus-chars
+NEXT_PUBLIC_PHONE=9857620569
+NEXT_PUBLIC_WHATSAPP=9779857620569
 ```
 
-4. Open `/` and `/shop`  
-5. Admin: `/admin`
+## Verify after Redeploy
 
-## If it still fails
+1. **Runtime logs** should show `[boot] Catalog has … products` or seeding  
+2. Open `https://YOUR-URL/api/health` → `{"ok":true,"products":22,…}`  
+3. Open `/` and `/shop`
 
-| Log / symptom | Fix |
-|---------------|-----|
-| 502 / not responding | Entry file must be `server.mjs` (not empty `next start` only) |
-| `Cannot find module 'prisma'` | Redeploy latest `main` |
-| Build failed | Node 20+, check build logs for TypeScript/Prisma errors |
-| Blank / couldn't load | Runtime logs — usually DB migrate; wipe `./data` only if schema is corrupt, then redeploy |
-| Domain not connected | Attach domain in Hostinger → Domains, set `NEXT_PUBLIC_SITE_URL` |
+## Still broken?
 
-## Repo
-
-https://github.com/Aseemsubedi/Tapari-Agro · branch `main`
+Paste:
+- Your live URL  
+- **Runtime logs** (not only build logs)  
+- Result of `/api/health`
