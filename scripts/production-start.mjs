@@ -30,22 +30,9 @@ function run(cmd, args, opts = {}) {
   }
 }
 
-fs.mkdirSync(uploadsDir, { recursive: true });
 fs.mkdirSync(dataDir, { recursive: true });
-
-// Persist uploads on DATA_DIR; keep /uploads URLs working via public symlink.
-try {
-  if (fs.existsSync(publicUploads)) {
-    const stat = fs.lstatSync(publicUploads);
-    if (stat.isSymbolicLink() || stat.isDirectory()) {
-      fs.rmSync(publicUploads, { recursive: true, force: true });
-    }
-  }
-  fs.symlinkSync(uploadsDir, publicUploads, "junction");
-} catch (err) {
-  console.warn("[start] Could not link public/uploads → DATA_DIR/uploads:", err.message);
-  fs.mkdirSync(publicUploads, { recursive: true });
-}
+fs.mkdirSync(uploadsDir, { recursive: true });
+fs.mkdirSync(publicUploads, { recursive: true });
 
 if (process.env.DATA_DIR || !process.env.DATABASE_URL) {
   // Absolute SQLite path (keep real spaces — do not percent-encode for Prisma).
