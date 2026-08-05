@@ -1,4 +1,4 @@
--- Squashed baseline matching current prisma/schema.prisma (SCHEMA_REV 28).
+-- Squashed baseline matching current prisma/schema.prisma (SCHEMA_REV 33).
 -- Fresh deploys: prisma migrate deploy
 -- Existing DBs already at this schema: prisma migrate resolve --applied 20260803080000_baseline_current
 
@@ -48,6 +48,7 @@ CREATE TABLE "Product" (
     "digitalAvailable" INTEGER NOT NULL DEFAULT 0,
     "sellerVendorId" TEXT,
     "sellerUnitCost" INTEGER NOT NULL DEFAULT 0,
+    "essential" BOOLEAN NOT NULL DEFAULT false,
     "published" BOOLEAN NOT NULL DEFAULT true,
     "sellOnline" BOOLEAN NOT NULL DEFAULT true,
     "sellOffline" BOOLEAN NOT NULL DEFAULT true,
@@ -98,6 +99,7 @@ CREATE TABLE "StockPurchase" (
     "billNo" TEXT NOT NULL DEFAULT '',
     "quantity" INTEGER NOT NULL,
     "remainingQty" INTEGER NOT NULL DEFAULT 0,
+    "stockKind" TEXT NOT NULL DEFAULT 'owned',
     "unitCost" INTEGER NOT NULL,
     "amountPaid" INTEGER NOT NULL DEFAULT 0,
     "paid" BOOLEAN NOT NULL DEFAULT false,
@@ -119,12 +121,15 @@ CREATE TABLE "Order" (
     "address" TEXT NOT NULL,
     "notes" TEXT NOT NULL DEFAULT '',
     "channel" TEXT NOT NULL DEFAULT 'online',
+    "checkoutMethod" TEXT NOT NULL DEFAULT 'cash',
     "paymentMethod" TEXT NOT NULL DEFAULT '',
     "paymentStatus" TEXT NOT NULL DEFAULT 'unpaid',
     "amountPaid" INTEGER NOT NULL DEFAULT 0,
     "remarks" TEXT NOT NULL DEFAULT '',
     "paymentNote" TEXT NOT NULL DEFAULT '',
     "status" TEXT NOT NULL DEFAULT 'pending',
+    "supplierStockReceived" BOOLEAN NOT NULL DEFAULT false,
+    "inventoryHeld" BOOLEAN NOT NULL DEFAULT false,
     "subtotal" INTEGER NOT NULL DEFAULT 0,
     "discountAmount" INTEGER NOT NULL DEFAULT 0,
     "discountPercent" INTEGER NOT NULL DEFAULT 0,
@@ -151,6 +156,18 @@ CREATE TABLE "OrderItem" (
     "sellerUnitCost" INTEGER NOT NULL DEFAULT 0,
     CONSTRAINT "OrderItem_orderId_fkey" FOREIGN KEY ("orderId") REFERENCES "Order" ("id") ON DELETE CASCADE ON UPDATE CASCADE,
     CONSTRAINT "OrderItem_productId_fkey" FOREIGN KEY ("productId") REFERENCES "Product" ("id") ON DELETE RESTRICT ON UPDATE CASCADE
+);
+
+-- CreateTable
+CREATE TABLE "OrderItemDigitalLot" (
+    "id" TEXT NOT NULL PRIMARY KEY,
+    "orderItemId" TEXT NOT NULL,
+    "stockPurchaseId" TEXT NOT NULL,
+    "vendorId" TEXT NOT NULL,
+    "quantity" INTEGER NOT NULL,
+    "unitCost" INTEGER NOT NULL,
+    CONSTRAINT "OrderItemDigitalLot_orderItemId_fkey" FOREIGN KEY ("orderItemId") REFERENCES "OrderItem" ("id") ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT "OrderItemDigitalLot_stockPurchaseId_fkey" FOREIGN KEY ("stockPurchaseId") REFERENCES "StockPurchase" ("id") ON DELETE RESTRICT ON UPDATE CASCADE
 );
 
 -- CreateTable
@@ -222,6 +239,9 @@ CREATE INDEX "Product_sellerVendorId_idx" ON "Product"("sellerVendorId");
 CREATE INDEX "Product_inventoryMode_idx" ON "Product"("inventoryMode");
 
 -- CreateIndex
+CREATE INDEX "Product_essential_idx" ON "Product"("essential");
+
+-- CreateIndex
 CREATE INDEX "HomeSectionProduct_sectionId_idx" ON "HomeSectionProduct"("sectionId");
 
 -- CreateIndex
@@ -249,7 +269,19 @@ CREATE INDEX "StockPurchase_productId_remainingQty_idx" ON "StockPurchase"("prod
 CREATE INDEX "StockPurchase_vendorId_idx" ON "StockPurchase"("vendorId");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "SellerSettlement_orderItemId_key" ON "SellerSettlement"("orderItemId");
+CREATE INDEX "StockPurchase_stockKind_idx" ON "StockPurchase"("stockKind");
+
+-- CreateIndex
+CREATE INDEX "OrderItemDigitalLot_orderItemId_idx" ON "OrderItemDigitalLot"("orderItemId");
+
+-- CreateIndex
+CREATE INDEX "OrderItemDigitalLot_stockPurchaseId_idx" ON "OrderItemDigitalLot"("stockPurchaseId");
+
+-- CreateIndex
+CREATE INDEX "OrderItemDigitalLot_vendorId_idx" ON "OrderItemDigitalLot"("vendorId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "SellerSettlement_orderItemId_vendorId_key" ON "SellerSettlement"("orderItemId", "vendorId");
 
 -- CreateIndex
 CREATE INDEX "SellerSettlement_vendorId_paid_idx" ON "SellerSettlement"("vendorId", "paid");

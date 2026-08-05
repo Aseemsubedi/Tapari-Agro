@@ -47,8 +47,8 @@ try {
   fs.mkdirSync(publicUploads, { recursive: true });
 }
 
-if (!process.env.DATABASE_URL) {
-  // Prisma file URLs: absolute paths need three slashes after file:
+if (process.env.DATA_DIR || !process.env.DATABASE_URL) {
+  // Absolute SQLite path (keep real spaces — do not percent-encode for Prisma).
   process.env.DATABASE_URL = `file:${dbPath}`;
 }
 
