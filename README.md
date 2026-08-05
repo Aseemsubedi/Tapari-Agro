@@ -48,11 +48,12 @@ NEXT_PUBLIC_WHATSAPP=9779857620569
 
 ### B) Hostinger Deploy Web App
 
-1. Hostinger → **Add website → Deploy Web App** → connect this GitHub repo
-2. **Build:** `npm ci && npm run build`
-3. **Start:** `npm run start`
-4. Add the same env vars as above (you can omit `DATA_DIR`; app uses `./data` which persists on Hostinger Node)
-5. Point your domain at the app
+See **[HOSTINGER.md](HOSTINGER.md)** for exact hPanel fields.
+
+1. Hostinger → **Websites → Add website → Node.js / Deploy Web App** → connect `Aseemsubedi/Tapari-Agro` (`main`)
+2. **Build:** `npm run build` · **Start:** `npm start` · Node **20+**
+3. Set env vars from [HOSTINGER.md](HOSTINGER.md) (`ADMIN_*`, `NEXT_PUBLIC_SITE_URL`, `DATA_DIR`, etc.)
+4. Redeploy and check **Runtime logs** if the site fails
 
 ### C) Render
 
