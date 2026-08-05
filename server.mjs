@@ -82,21 +82,12 @@ console.log(`[start] SITE=${process.env.NEXT_PUBLIC_SITE_URL || "(unset)"}`);
 
 run(bin("prisma"), ["migrate", "deploy"]);
 
-const count = spawnSync(
-  bin("tsx"),
-  [
-    "-e",
-    `import { PrismaClient } from "@prisma/client";
-const p = new PrismaClient();
-try {
-  const n = await p.product.count();
-  console.log(n);
-} finally {
-  await p.$disconnect();
-}`,
-  ],
-  { cwd: root, encoding: "utf8", env: process.env, shell: process.platform === "win32" },
-);
+const count = spawnSync(bin("tsx"), ["scripts/count-products.mjs"], {
+  cwd: root,
+  encoding: "utf8",
+  env: process.env,
+  shell: process.platform === "win32",
+});
 
 if (count.status !== 0) {
   console.error("[start] Product count failed:");
