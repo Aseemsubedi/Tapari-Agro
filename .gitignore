@@ -50,3 +50,6 @@ next-env.d.ts
 # product image uploads
 /public/uploads/*
 !/public/uploads/.gitkeep
+
+# production SQLite + uploads volume (Hostinger / Railway / local prod)
+/data/

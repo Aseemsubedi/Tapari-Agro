@@ -552,10 +552,22 @@ export async function uploadProductImageAction(
           : "jpg";
 
   const filename = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
-  const dir = path.join(process.cwd(), "public", "uploads");
+  const dataDir = process.env.DATA_DIR || path.join(process.cwd(), "data");
+  const dir = path.join(dataDir, "uploads");
   await mkdir(dir, { recursive: true });
   const buffer = Buffer.from(await file.arrayBuffer());
   await writeFile(path.join(dir, filename), buffer);
+
+  // Also mirror into public/uploads when not using a DATA_DIR symlink (local/dev).
+  const publicDir = path.join(process.cwd(), "public", "uploads");
+  try {
+    await mkdir(publicDir, { recursive: true });
+    if (path.resolve(dir) !== path.resolve(publicDir)) {
+      await writeFile(path.join(publicDir, filename), buffer);
+    }
+  } catch {
+    /* public mirror optional when DATA_DIR symlink owns public/uploads */
+  }
 
   return { url: `/uploads/${filename}` };
 }

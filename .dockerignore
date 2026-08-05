@@ -1,0 +1,12 @@
+node_modules
+.next
+.git
+.gitignore
+*.md
+.env
+.env.*
+data
+prisma/*.db
+prisma/*.db-journal
+tsconfig.tsbuildinfo
+.DS_Store
