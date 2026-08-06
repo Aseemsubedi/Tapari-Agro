@@ -6,7 +6,7 @@ import path from "node:path";
 /** Bump when Product / related models gain fields the cached client must pick up. */
 const SCHEMA_REV = 36;
 const MIGRATION_NAME = "20260803080000_baseline_current";
-export const DB_BOOT_VERSION = "2026-08-06-schema-bootstrap-v1";
+export const DB_BOOT_VERSION = "2026-08-06-seed-inprocess-v2";
 
 const globalForPrisma = globalThis as unknown as {
   prisma?: PrismaClient;
@@ -183,24 +183,41 @@ async function seedIfEmpty(client: PrismaClient) {
     console.log(`[db] Catalog has ${count} products`);
     return count;
   }
-  console.log("[db] Empty catalog — seeding…");
-  const tsx = bin("tsx");
-  execFileSync(tsx.cmd, [...tsx.argsPrefix, "prisma/seed.ts"], {
-    cwd: process.cwd(),
-    stdio: "inherit",
-    env: { ...process.env, DATABASE_URL: ensureDatabaseUrl() },
-  });
-  return client.product.count();
+  console.log("[db] Empty catalog — seeding in-process (no tsx spawn)…");
+
+  // Prefer in-process seed — Hostinger often has no `tsx` on PATH (ENOENT).
+  try {
+    const seedMod = await import("../../prisma/seed");
+    await seedMod.seedCatalog(client);
+  } catch (err) {
+    console.warn("[db] In-process seed import failed, trying tsx cli.mjs:", err);
+    const tsxCli = path.join(process.cwd(), "node_modules", "tsx", "dist", "cli.mjs");
+    if (!fs.existsSync(tsxCli)) {
+      throw new Error("tsx not available for seed — add tsx dependency and redeploy");
+    }
+    execFileSync(process.execPath, [tsxCli, "prisma/seed.ts"], {
+      cwd: process.cwd(),
+      stdio: "inherit",
+      env: { ...process.env, DATABASE_URL: ensureDatabaseUrl() },
+    });
+  }
+
+  const after = await client.product.count();
+  console.log(`[db] After seed: ${after} products`);
+  return after;
 }
 
 /** Migrate (+ seed). Prefer in-process SQL so Hostinger works without CLI. */
-export async function prepareDatabase() {
+export async function prepareDatabase(options?: { force?: boolean }) {
+  if (options?.force) {
+    globalForPrisma.__tapariReady = undefined;
+  }
+
   if (!globalForPrisma.__tapariReady) {
     globalForPrisma.__tapariReady = (async () => {
       const url = ensureDatabaseUrl();
       console.log(`[db] prepare DATABASE_URL=${url} boot=${DB_BOOT_VERSION}`);
 
-      // Best-effort CLI first (keeps migration history tidy when available).
       try {
         tryCliMigrate(url);
       } catch (err) {
@@ -211,7 +228,6 @@ export async function prepareDatabase() {
       if (!(await productTableExists(client))) {
         console.warn("[db] Product table missing — applying baseline SQL");
         await applyBaselineSql(client);
-        // Refresh client after DDL
         await client.$disconnect().catch(() => undefined);
         globalForPrisma.prisma = undefined;
         client = getClient();
@@ -222,7 +238,11 @@ export async function prepareDatabase() {
       }
 
       await seedIfEmpty(client);
-    })();
+    })().catch((err) => {
+      // Allow a later request to retry boot after a failure (e.g. tsx ENOENT).
+      globalForPrisma.__tapariReady = undefined;
+      throw err;
+    });
   }
   await globalForPrisma.__tapariReady;
 }

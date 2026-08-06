@@ -9,7 +9,7 @@ export async function GET() {
     const { ensureDatabaseUrl, prepareDatabase, prisma, DB_BOOT_VERSION } =
       await import("@/lib/db");
     const databaseUrl = ensureDatabaseUrl();
-    await prepareDatabase();
+    await prepareDatabase({ force: true });
     const products = await prisma.product.count();
     return NextResponse.json({
       ok: true,
@@ -19,7 +19,7 @@ export async function GET() {
       hasSiteUrl: Boolean(process.env.NEXT_PUBLIC_SITE_URL),
       dataDir: process.env.DATA_DIR ?? null,
       databaseUrl: databaseUrl.startsWith("file:")
-        ? databaseUrl.replace(/^file:/, "file:…/")
+        ? databaseUrl.replace(/[^/]+$/, "prod.db")
         : "(set)",
     });
   } catch (error) {

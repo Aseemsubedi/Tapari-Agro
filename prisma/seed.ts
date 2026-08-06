@@ -381,14 +381,14 @@ function slugify(value: string) {
     .replace(/^-|-$/g, "");
 }
 
-async function main() {
+async function seedCatalog(client: PrismaClient = prisma) {
   console.log(
     `Seeding ${seedProducts.length} products (${ownedProducts.length} owned · ${digitalProducts.length} digital)…`,
   );
 
   for (let i = 0; i < seedCategories.length; i++) {
     const name = seedCategories[i]!;
-    await prisma.category.upsert({
+    await client.category.upsert({
       where: { name },
       update: { sortOrder: i },
       create: { name, slug: slugify(name), sortOrder: i },
@@ -397,14 +397,14 @@ async function main() {
 
   for (let i = 0; i < seedUnits.length; i++) {
     const name = seedUnits[i]!;
-    await prisma.unit.upsert({
+    await client.unit.upsert({
       where: { name },
       update: { sortOrder: i },
       create: { name, sortOrder: i },
     });
   }
 
-  const vendor = await prisma.vendor.upsert({
+  const vendor = await client.vendor.upsert({
     where: { name: "Hill Kishan Collective" },
     update: {
       phone: "9857620569",
@@ -440,13 +440,13 @@ async function main() {
       sellOffline: true,
     };
 
-    const row = await prisma.product.upsert({
+    const row = await client.product.upsert({
       where: { slug: product.slug },
       update: data,
       create: data,
     });
 
-    await prisma.productVendor.upsert({
+    await client.productVendor.upsert({
       where: {
         productId_vendorId: { productId: row.id, vendorId: vendor.id },
       },
@@ -457,7 +457,7 @@ async function main() {
     if (isDigital) {
       const qty = product.digitalAvailable ?? 0;
       const unitCost = product.sellerUnitCost ?? 0;
-      const existing = await prisma.stockPurchase.findFirst({
+      const existing = await client.stockPurchase.findFirst({
         where: {
           productId: row.id,
           vendorId: vendor.id,
@@ -467,7 +467,7 @@ async function main() {
       });
 
       if (existing) {
-        await prisma.stockPurchase.update({
+        await client.stockPurchase.update({
           where: { id: existing.id },
           data: {
             quantity: qty,
@@ -479,7 +479,7 @@ async function main() {
           },
         });
       } else {
-        await prisma.stockPurchase.create({
+        await client.stockPurchase.create({
           data: {
             batchId: `seed-digital-${Date.now()}`,
             productId: row.id,
@@ -498,7 +498,7 @@ async function main() {
       }
 
       // Keep product.digitalAvailable / mode in sync with lots
-      const lots = await prisma.stockPurchase.findMany({
+      const lots = await client.stockPurchase.findMany({
         where: {
           productId: row.id,
           stockKind: "digital",
@@ -506,7 +506,7 @@ async function main() {
         },
       });
       const digitalAvailable = lots.reduce((s, l) => s + l.remainingQty, 0);
-      await prisma.product.update({
+      await client.product.update({
         where: { id: row.id },
         data: {
           digitalAvailable,
@@ -520,11 +520,11 @@ async function main() {
   }
 
   // Ensure a published Local Product home section lists a mix
-  let section = await prisma.homeSection.findFirst({
+  let section = await client.homeSection.findFirst({
     where: { title: "Local Product" },
   });
   if (!section) {
-    section = await prisma.homeSection.create({
+    section = await client.homeSection.create({
       data: {
         title: "Local Product",
         eyebrow: "From the hills",
@@ -534,7 +534,7 @@ async function main() {
     });
   }
 
-  const featured = await prisma.product.findMany({
+  const featured = await client.product.findMany({
     where: {
       slug: {
         in: [
@@ -554,7 +554,7 @@ async function main() {
 
   for (let i = 0; i < featured.length; i++) {
     const p = featured[i]!;
-    await prisma.homeSectionProduct.upsert({
+    await client.homeSectionProduct.upsert({
       where: {
         sectionId_productId: { sectionId: section.id, productId: p.id },
       },
@@ -567,13 +567,13 @@ async function main() {
     });
   }
 
-  const owned = await prisma.product.count({
+  const owned = await client.product.count({
     where: { inventoryMode: "owned" },
   });
-  const digital = await prisma.product.count({
+  const digital = await client.product.count({
     where: { inventoryMode: "digital" },
   });
-  const hybrid = await prisma.product.count({
+  const hybrid = await client.product.count({
     where: { inventoryMode: "hybrid" },
   });
   console.log(
@@ -581,12 +581,25 @@ async function main() {
   );
 }
 
-main()
-  .then(async () => {
-    await prisma.$disconnect();
-  })
-  .catch(async (error) => {
-    console.error(error);
-    await prisma.$disconnect();
-    process.exit(1);
-  });
+export { seedCatalog };
+
+async function main() {
+  await seedCatalog(prisma);
+}
+
+// Only auto-run when executed as a script (not when imported by Next).
+const invoked =
+  typeof process.argv[1] === "string" &&
+  /seed\.(ts|js|mjs|cjs)$/.test(process.argv[1].replace(/\\/g, "/"));
+
+if (invoked) {
+  main()
+    .then(async () => {
+      await prisma.$disconnect();
+    })
+    .catch(async (error) => {
+      console.error(error);
+      await prisma.$disconnect();
+      process.exit(1);
+    });
+}
