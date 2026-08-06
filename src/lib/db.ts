@@ -1,14 +1,44 @@
 import { Prisma, PrismaClient } from "@prisma/client";
+import fs from "node:fs";
+import path from "node:path";
 
 /** Bump when Product / related models gain fields the cached client must pick up. */
-const SCHEMA_REV = 33;
+const SCHEMA_REV = 34;
 
 const globalForPrisma = globalThis as unknown as {
   prisma?: PrismaClient;
   prismaSchemaRev?: number;
 };
 
+/**
+ * Hostinger often omits DATABASE_URL from the Next process even when
+ * boot-db.mjs set it in a child. Always resolve a usable SQLite path here.
+ */
+export function ensureDatabaseUrl() {
+  const existing = process.env.DATABASE_URL?.trim() || "";
+  const needsDefault =
+    !existing ||
+    existing.includes("dev.db") ||
+    (process.env.NODE_ENV === "production" && existing.startsWith("file:./"));
+
+  if (!needsDefault) return existing;
+
+  const dataDir = path.resolve(
+    process.env.DATA_DIR || path.join(process.cwd(), "data"),
+  );
+  try {
+    fs.mkdirSync(dataDir, { recursive: true });
+    fs.mkdirSync(path.join(dataDir, "uploads"), { recursive: true });
+  } catch {
+    /* ignore */
+  }
+  process.env.DATA_DIR = dataDir;
+  process.env.DATABASE_URL = `file:${path.join(dataDir, "prod.db")}`;
+  return process.env.DATABASE_URL;
+}
+
 function createClient() {
+  ensureDatabaseUrl();
   return new PrismaClient();
 }
 
@@ -72,6 +102,7 @@ function clientIsCurrent(client?: PrismaClient) {
 }
 
 function getClient(): PrismaClient {
+  ensureDatabaseUrl();
   const existing = globalForPrisma.prisma;
   const revOk = globalForPrisma.prismaSchemaRev === SCHEMA_REV;
   if (existing && revOk && clientIsCurrent(existing)) {

@@ -32,6 +32,8 @@ NEXT_PUBLIC_PHONE=9857620569
 NEXT_PUBLIC_WHATSAPP=9779857620569
 ```
 
+**Required:** `DATABASE_URL` must be set in Hostinger env (latest code also auto-fills `file:./data/prod.db` if missing).
+
 ## Domain
 
 1. Hostinger → websites → your Node app → **Domains** → attach `tapariagro.com.np` (and `www` if needed)
