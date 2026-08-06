@@ -7,7 +7,7 @@ export function getSiteUrl() {
     process.env.NEXT_PUBLIC_SITE_URL?.trim() ||
     process.env.VERCEL_PROJECT_PRODUCTION_URL?.trim() ||
     process.env.VERCEL_URL?.trim() ||
-    "http://localhost:3000";
+    "https://tapariagro.com.np";
   const withProto = raw.startsWith("http") ? raw : `https://${raw}`;
   return withProto.replace(/\/$/, "");
 }

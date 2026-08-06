@@ -4,8 +4,7 @@ export async function register() {
     const { ensureProductionReady } = await import("./lib/ensure-production-ready");
     await ensureProductionReady();
   } catch (error) {
-    console.error("[instrumentation] Boot failed:", error);
-    // Do not swallow — better a clear startup failure than silent 500s.
-    throw error;
+    // Log but do not kill the process — a hard throw here becomes a Hostinger 503.
+    console.error("[instrumentation] Boot failed (site may still start):", error);
   }
 }

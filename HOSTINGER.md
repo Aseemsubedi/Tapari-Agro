@@ -1,8 +1,10 @@
 # Hostinger — Tapari Agro
 
+Domain: **https://tapariagro.com.np** (currently returns **503** until the Node app stays running).
+
 Build can succeed while the site still fails. Hostinger’s Next preset often runs **`next start` only**, which used to skip DB migrate/seed.
 
-Latest `main` fixes that: **`src/instrumentation.ts`** boots the database even when Entry file is ignored.
+Latest `main` boots the DB via **`src/instrumentation.ts`** even when Entry file is ignored.
 
 ## hPanel settings (use these)
 
@@ -22,7 +24,7 @@ If Entry file cannot be set, Redeploy anyway — instrumentation still runs migr
 NODE_ENV=production
 DATA_DIR=./data
 DATABASE_URL=file:./data/prod.db
-NEXT_PUBLIC_SITE_URL=https://YOUR-REAL-URL
+NEXT_PUBLIC_SITE_URL=https://tapariagro.com.np
 ADMIN_EMAIL=admin@tapariagro.com
 ADMIN_PASSWORD=your-strong-password
 ADMIN_SESSION_SECRET=optional-32-plus-chars
@@ -30,15 +32,18 @@ NEXT_PUBLIC_PHONE=9857620569
 NEXT_PUBLIC_WHATSAPP=9779857620569
 ```
 
+## Domain
+
+1. Hostinger → websites → your Node app → **Domains** → attach `tapariagro.com.np` (and `www` if needed)
+2. DNS already points at Hostinger (`hstgr` / parking NS) — keep that
+3. Set `NEXT_PUBLIC_SITE_URL=https://tapariagro.com.np` then Redeploy
+
 ## Verify after Redeploy
 
 1. **Runtime logs** should show `[boot] Catalog has … products` or seeding  
-2. Open `https://YOUR-URL/api/health` → `{"ok":true,"products":22,…}`  
+2. Open https://tapariagro.com.np/api/health → `{"ok":true,"products":22,…}`  
 3. Open `/` and `/shop`
 
-## Still broken?
+## Still 503?
 
-Paste:
-- Your live URL  
-- **Runtime logs** (not only build logs)  
-- Result of `/api/health`
+That means the Node process crashed or never started. Paste **Runtime logs** (not build logs).

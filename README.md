@@ -35,7 +35,7 @@ GitHub alone is **not** a live website. You need a Node host with a **persistent
 ```env
 DATA_DIR=/data
 DATABASE_URL=file:/data/prod.db
-NEXT_PUBLIC_SITE_URL=https://YOUR-app.up.railway.app
+NEXT_PUBLIC_SITE_URL=https://tapariagro.com.np
 ADMIN_EMAIL=admin@tapariagro.com
 ADMIN_PASSWORD=use-a-strong-password
 ADMIN_SESSION_SECRET=long-random-string-at-least-16-chars
@@ -46,13 +46,14 @@ NEXT_PUBLIC_WHATSAPP=9779857620569
 4. Generate a public domain in Railway → Settings → Networking
 5. First boot runs migrate + seed automatically (`npm start`)
 
-### B) Hostinger Deploy Web App
+### B) Hostinger Deploy Web App (live domain)
 
-**Entry file: `server.mjs`** — full steps in [HOSTINGER.md](HOSTINGER.md).
+**Site:** https://tapariagro.com.np · **Entry file:** `server.mjs` — see [HOSTINGER.md](HOSTINGER.md).
 
 1. Node.js Web App → GitHub `Aseemsubedi/Tapari-Agro` (`main`)
 2. Build: `build` · Entry: `server.mjs` · Node 20+
-3. Env vars from HOSTINGER.md · Redeploy · check Runtime logs
+3. Env: `NEXT_PUBLIC_SITE_URL=https://tapariagro.com.np` + vars in HOSTINGER.md
+4. Attach domain `tapariagro.com.np` · Redeploy · check Runtime logs · `/api/health`
 
 ### C) Render
 
