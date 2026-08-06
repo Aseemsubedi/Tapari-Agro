@@ -38,8 +38,13 @@ export function ensureDatabaseUrl() {
 }
 
 function createClient() {
-  ensureDatabaseUrl();
-  return new PrismaClient();
+  const url = ensureDatabaseUrl();
+  // Pass url explicitly — Hostinger often omits DATABASE_URL from Prisma's env reader.
+  return new PrismaClient({
+    datasources: {
+      db: { url },
+    },
+  });
 }
 
 /** True if this PrismaClient instance was built with the given model field. */
