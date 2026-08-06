@@ -50,3 +50,11 @@ NEXT_PUBLIC_WHATSAPP=9779857620569
 ## Still 503?
 
 That means the Node process crashed or never started. Paste **Runtime logs** (not build logs).
+
+## Still 504 Gateway Time-out?
+
+Nginx waited for Node and gave up. Usually the app hung during migrate/seed at start.
+
+1. Hostinger → your Node app → **Restart** (or Redeploy latest `main`)
+2. Wait ~1–2 minutes, then open https://tapariagro.com.np/api/health
+3. If still 504, paste **Runtime logs** (look for `[boot]` / `[db]` / hang on `prisma migrate`)

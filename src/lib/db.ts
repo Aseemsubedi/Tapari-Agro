@@ -6,7 +6,7 @@ import path from "node:path";
 /** Bump when Product / related models gain fields the cached client must pick up. */
 const SCHEMA_REV = 36;
 const MIGRATION_NAME = "20260803080000_baseline_current";
-export const DB_BOOT_VERSION = "2026-08-06-seed-inprocess-v2";
+export const DB_BOOT_VERSION = "2026-08-06-nohang-boot-v3";
 
 const globalForPrisma = globalThis as unknown as {
   prisma?: PrismaClient;
@@ -170,10 +170,12 @@ function tryCliMigrate(url: string) {
   const root = process.cwd();
   const prisma = bin("prisma");
   console.log(`[db] CLI migrate deploy DATABASE_URL=${url}`);
+  // Hard timeout — hung prisma CLI is a common Hostinger 504 cause.
   execFileSync(prisma.cmd, [...prisma.argsPrefix, "migrate", "deploy"], {
     cwd: root,
     stdio: "inherit",
     env: { ...process.env, DATABASE_URL: url },
+    timeout: 15_000,
   });
 }
 
@@ -199,6 +201,7 @@ async function seedIfEmpty(client: PrismaClient) {
       cwd: process.cwd(),
       stdio: "inherit",
       env: { ...process.env, DATABASE_URL: ensureDatabaseUrl() },
+      timeout: 60_000,
     });
   }
 
@@ -218,13 +221,20 @@ export async function prepareDatabase(options?: { force?: boolean }) {
       const url = ensureDatabaseUrl();
       console.log(`[db] prepare DATABASE_URL=${url} boot=${DB_BOOT_VERSION}`);
 
-      try {
-        tryCliMigrate(url);
-      } catch (err) {
-        console.warn("[db] CLI migrate failed — will apply SQL in-process:", err);
+      // Prefer in-process SQL. CLI migrate is optional and time-capped so
+      // store pages never hang forever waiting on prisma (nginx 504).
+      let client = getClient();
+      if (!(await productTableExists(client))) {
+        try {
+          tryCliMigrate(url);
+          await client.$disconnect().catch(() => undefined);
+          globalForPrisma.prisma = undefined;
+          client = getClient();
+        } catch (err) {
+          console.warn("[db] CLI migrate failed — will apply SQL in-process:", err);
+        }
       }
 
-      let client = getClient();
       if (!(await productTableExists(client))) {
         console.warn("[db] Product table missing — applying baseline SQL");
         await applyBaselineSql(client);

@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 /**
  * Shared DB boot for Hostinger (server.mjs entry).
- * Absolute DATABASE_URL only — Prisma resolves file:./ relative to prisma/.
+ * Keep this fast and non-fatal — hung migrate/seed causes nginx 504.
+ * Schema + seed also run in-process via instrumentation / prepareDatabase.
  */
 import { execFileSync } from "node:child_process";
 import { randomBytes } from "node:crypto";
@@ -10,19 +11,27 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const MIGRATE_TIMEOUT_MS = 20_000;
 
 function bin(name) {
   const local = path.join(root, "node_modules", ".bin", name);
   return fs.existsSync(local) ? local : name;
 }
 
-function run(cmd, args) {
+function runOptional(cmd, args, timeoutMs) {
   console.log(`[boot] $ ${cmd} ${args.join(" ")}`);
-  execFileSync(cmd, args, {
-    cwd: root,
-    stdio: "inherit",
-    env: process.env,
-  });
+  try {
+    execFileSync(cmd, args, {
+      cwd: root,
+      stdio: "inherit",
+      env: process.env,
+      timeout: timeoutMs,
+    });
+    return true;
+  } catch (err) {
+    console.warn(`[boot] optional step failed (continuing):`, err?.message || err);
+    return false;
+  }
 }
 
 export function bootDatabase() {
@@ -67,24 +76,9 @@ export function bootDatabase() {
   console.log(`[boot] DATA_DIR=${dataDir}`);
   console.log(`[boot] DATABASE_URL=${process.env.DATABASE_URL}`);
 
-  run(bin("prisma"), ["migrate", "deploy"]);
-
-  const countOut = execFileSync(bin("tsx"), ["scripts/count-products.mjs"], {
-    cwd: root,
-    encoding: "utf8",
-    env: process.env,
-  });
-  const productCount = Number.parseInt(
-    String(countOut).trim().split("\n").filter(Boolean).pop() || "0",
-    10,
-  );
-
-  if (!Number.isFinite(productCount) || productCount === 0) {
-    console.log("[boot] Empty catalog — seeding…");
-    run(bin("tsx"), ["prisma/seed.ts"]);
-  } else {
-    console.log(`[boot] Catalog has ${productCount} products`);
-  }
+  // Best-effort only. In-process prepareDatabase handles schema + seed if this fails.
+  runOptional(bin("prisma"), ["migrate", "deploy"], MIGRATE_TIMEOUT_MS);
+  console.log("[boot] DB path ready — Next will finish migrate/seed in-process if needed");
 }
 
 const isDirect =

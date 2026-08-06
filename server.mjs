@@ -2,6 +2,9 @@
 /**
  * Hostinger Entry file: server.mjs
  * Also safe as `npm start`.
+ *
+ * Never block forever before `next start` — nginx returns 504 if Node
+ * does not listen within the gateway timeout.
  */
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
@@ -15,8 +18,8 @@ process.chdir(root);
 try {
   bootDatabase();
 } catch (err) {
-  console.error("[start] Database boot failed:", err);
-  process.exit(1);
+  // Still start Next — instrumentation / prepareDatabase can recover.
+  console.error("[start] Database boot warning (continuing):", err);
 }
 
 function bin(name) {
