@@ -6,8 +6,11 @@ export const dynamic = "force-dynamic";
 /** Hostinger / uptime check — confirms DB is reachable after boot. */
 export async function GET() {
   try {
-    const { ensureDatabaseUrl, prisma } = await import("@/lib/db");
+    const { ensureDatabaseUrl, prepareDatabase, prisma } = await import(
+      "@/lib/db"
+    );
     const databaseUrl = ensureDatabaseUrl();
+    await prepareDatabase();
     const products = await prisma.product.count();
     return NextResponse.json({
       ok: true,
@@ -16,6 +19,7 @@ export async function GET() {
       hasSiteUrl: Boolean(process.env.NEXT_PUBLIC_SITE_URL),
       dataDir: process.env.DATA_DIR ?? null,
       hasDatabaseUrl: Boolean(databaseUrl),
+      databaseUrlHostSafe: databaseUrl.replace(/\/\/.*@/, "//***@"),
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);

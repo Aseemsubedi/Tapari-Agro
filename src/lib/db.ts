@@ -1,28 +1,28 @@
 import { Prisma, PrismaClient } from "@prisma/client";
+import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 
 /** Bump when Product / related models gain fields the cached client must pick up. */
-const SCHEMA_REV = 34;
+const SCHEMA_REV = 35;
 
 const globalForPrisma = globalThis as unknown as {
   prisma?: PrismaClient;
   prismaSchemaRev?: number;
+  __tapariMigrated?: boolean;
 };
 
+function bin(name: string) {
+  const local = path.join(process.cwd(), "node_modules", ".bin", name);
+  return fs.existsSync(local) ? local : name;
+}
+
 /**
- * Hostinger often omits DATABASE_URL from the Next process even when
- * boot-db.mjs set it in a child. Always resolve a usable SQLite path here.
+ * Prisma resolves relative `file:./…` URLs against the `prisma/` folder,
+ * not cwd — that creates an empty DB with no tables on Hostinger.
+ * Always use an absolute file path.
  */
 export function ensureDatabaseUrl() {
-  const existing = process.env.DATABASE_URL?.trim() || "";
-  const needsDefault =
-    !existing ||
-    existing.includes("dev.db") ||
-    (process.env.NODE_ENV === "production" && existing.startsWith("file:./"));
-
-  if (!needsDefault) return existing;
-
   const dataDir = path.resolve(
     process.env.DATA_DIR || path.join(process.cwd(), "data"),
   );
@@ -33,13 +33,62 @@ export function ensureDatabaseUrl() {
     /* ignore */
   }
   process.env.DATA_DIR = dataDir;
-  process.env.DATABASE_URL = `file:${path.join(dataDir, "prod.db")}`;
-  return process.env.DATABASE_URL;
+
+  const absolute = `file:${path.join(dataDir, "prod.db")}`;
+  const existing = process.env.DATABASE_URL?.trim() || "";
+
+  // Relative SQLite URLs are unsafe with Prisma — always normalize in production.
+  if (
+    !existing ||
+    existing.includes("dev.db") ||
+    existing.startsWith("file:./") ||
+    existing.startsWith("file:data/") ||
+    process.env.NODE_ENV === "production"
+  ) {
+    process.env.DATABASE_URL = absolute;
+  } else if (existing.startsWith("file:") && !existing.startsWith("file:/")) {
+    // file:prod.db or similar relative form
+    process.env.DATABASE_URL = absolute;
+  }
+
+  return process.env.DATABASE_URL!;
+}
+
+/** Create tables if this SQLite file was never migrated. */
+export function ensureDatabaseMigrated() {
+  if (globalForPrisma.__tapariMigrated) return;
+  const url = ensureDatabaseUrl();
+  const root = process.cwd();
+  console.log(`[db] migrate deploy DATABASE_URL=${url}`);
+  try {
+    execFileSync(bin("prisma"), ["migrate", "deploy"], {
+      cwd: root,
+      stdio: "inherit",
+      env: { ...process.env, DATABASE_URL: url },
+    });
+    globalForPrisma.__tapariMigrated = true;
+  } catch (err) {
+    console.error("[db] migrate deploy failed:", err);
+    throw err;
+  }
+}
+
+async function seedIfEmpty(client: PrismaClient) {
+  const count = await client.product.count();
+  if (count > 0) {
+    console.log(`[db] Catalog has ${count} products`);
+    return;
+  }
+  console.log("[db] Empty catalog — seeding…");
+  execFileSync(bin("tsx"), ["prisma/seed.ts"], {
+    cwd: process.cwd(),
+    stdio: "inherit",
+    env: { ...process.env, DATABASE_URL: ensureDatabaseUrl() },
+  });
 }
 
 function createClient() {
   const url = ensureDatabaseUrl();
-  // Pass url explicitly — Hostinger often omits DATABASE_URL from Prisma's env reader.
   return new PrismaClient({
     datasources: {
       db: { url },
@@ -47,7 +96,6 @@ function createClient() {
   });
 }
 
-/** True if this PrismaClient instance was built with the given model field. */
 function clientKnowsField(
   client: PrismaClient,
   model: string,
@@ -97,7 +145,6 @@ function clientIsCurrent(client?: PrismaClient) {
 
   if (!moduleOk) return false;
   if (!client) return true;
-  // Catch Turbopack HMR keeping an old PrismaClient after prisma generate.
   return (
     clientKnowsField(client, "StockPurchase", "stockKind") &&
     clientKnowsField(client, "StockPurchase", "remainingQty") &&
@@ -117,13 +164,30 @@ function getClient(): PrismaClient {
     void existing.$disconnect().catch(() => undefined);
   }
   const client = createClient();
-  // Always cache — production used to recreate a client on every Proxy access.
   globalForPrisma.prisma = client;
   globalForPrisma.prismaSchemaRev = SCHEMA_REV;
   return client;
 }
 
-/** Always resolves through getClient so schema bumps refresh a stale singleton. */
+/** Run migrate (+ seed if empty). Safe to call from instrumentation / health. */
+export async function prepareDatabase() {
+  ensureDatabaseMigrated();
+  const client = getClient();
+  try {
+    await seedIfEmpty(client);
+  } catch (err) {
+    // Table might still be missing if migrate failed — surface clearly
+    const message = err instanceof Error ? err.message : String(err);
+    if (message.includes("does not exist")) {
+      globalForPrisma.__tapariMigrated = false;
+      ensureDatabaseMigrated();
+      await seedIfEmpty(getClient());
+      return;
+    }
+    throw err;
+  }
+}
+
 export const prisma = new Proxy({} as PrismaClient, {
   get(_target, prop, receiver) {
     const client = getClient();

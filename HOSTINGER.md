@@ -32,7 +32,8 @@ NEXT_PUBLIC_PHONE=9857620569
 NEXT_PUBLIC_WHATSAPP=9779857620569
 ```
 
-**Required:** `DATABASE_URL` must be set in Hostinger env (latest code also auto-fills `file:./data/prod.db` if missing).
+**Note:** Latest code rewrites `DATABASE_URL` to an **absolute** `…/data/prod.db` path. Prisma treats `file:./…` as relative to the `prisma/` folder (empty DB → “Product does not exist” / ERROR 1064561082).
+
 
 ## Domain
 

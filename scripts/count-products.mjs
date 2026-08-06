@@ -4,7 +4,8 @@ import path from "node:path";
 
 const dataDir = path.resolve(process.env.DATA_DIR || path.join(process.cwd(), "data"));
 fs.mkdirSync(dataDir, { recursive: true });
-const url = process.env.DATABASE_URL?.trim() || `file:${path.join(dataDir, "prod.db")}`;
+// Always absolute — Prisma resolves file:./ relative to prisma/
+const url = `file:${path.join(dataDir, "prod.db")}`;
 process.env.DATABASE_URL = url;
 
 const prisma = new PrismaClient({

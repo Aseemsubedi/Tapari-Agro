@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
- * Shared DB boot for Hostinger.
- * Used by server.mjs and by Next instrumentation (via node scripts/boot-db.mjs).
+ * Shared DB boot for Hostinger (server.mjs entry).
+ * Absolute DATABASE_URL only — Prisma resolves file:./ relative to prisma/.
  */
 import { execFileSync } from "node:child_process";
 import { randomBytes } from "node:crypto";
@@ -40,6 +40,7 @@ export function bootDatabase() {
   fs.mkdirSync(publicUploads, { recursive: true });
 
   process.env.DATA_DIR = dataDir;
+  // Absolute path required — file:./data/prod.db lands under prisma/ with Prisma.
   process.env.DATABASE_URL = `file:${dbPath}`;
 
   if (!process.env.ADMIN_SESSION_SECRET || process.env.ADMIN_SESSION_SECRET.length < 16) {
