@@ -165,6 +165,20 @@ export function SiteFooter() {
           <p>© {year} Tapari Agro. All rights reserved.</p>
           <p className="tracking-wide">Parbat · Myagdi · Mustang</p>
         </div>
+
+        <div className="flex flex-col gap-2 border-t border-chalk/10 py-5 text-sm text-chalk/80 sm:flex-row sm:items-center sm:justify-between">
+          <p>
+            Website Developed By —{" "}
+            <span className="font-semibold text-brass">Aseem Subedi</span>
+          </p>
+          <a
+            href="tel:9806195800"
+            className="inline-flex items-center gap-2 text-chalk transition hover:text-brass"
+          >
+            <PhoneIcon className="h-4 w-4 shrink-0" />
+            <span className="font-medium tracking-wide">9806195800</span>
+          </a>
+        </div>
       </div>
 
       {/* Blinkit-style closing tagline */}
@@ -182,19 +196,6 @@ export function SiteFooter() {
               ♥
             </span>
           </p>
-          <div className="mt-8 flex flex-col gap-2 border-t border-black/[0.06] pt-6 text-sm text-ink/45 sm:flex-row sm:items-center sm:justify-between">
-            <p>
-              Website Developed By —{" "}
-              <span className="font-medium text-ink/60">Aseem Subedi</span>
-            </p>
-            <a
-              href="tel:9806195800"
-              className="inline-flex items-center gap-2 transition hover:text-pine"
-            >
-              <PhoneIcon className="h-4 w-4 shrink-0" />
-              <span>9806195800</span>
-            </a>
-          </div>
         </div>
       </div>
     </footer>
